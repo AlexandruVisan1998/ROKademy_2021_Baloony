@@ -1,12 +1,9 @@
 package com.Baloony;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 public class HAB {
 
@@ -16,12 +13,12 @@ public class HAB {
     private String type;
 
     // Date and location when it was launched
-    private String takeoffDatetime;
+    private LocalDateTime takeoffDatetime;
     private double takeoffLatitude;
     private double takeoffLongitude;
 
     // Information about the current state of the HAB
-    private String currentDatetime;
+    private LocalDateTime currentDatetime;
     private double currentAltitude;
     private double currentLatitude;
     private double currentLongitude;
@@ -37,22 +34,25 @@ public class HAB {
         this.name = name;
         this.serialNumber = serialNumber;
         this.type = type;
-        airComposition = new double[9];
+        // Initial zero values
+        this.currentAltitude = 0;
+        this.currentLatitude = 0;
+        this.currentLongitude = 0;
+        this.currentSpeed = 0;
+        this.windSpeed = 0;
+        this.airPressure = 0;
+        this.airTemperature = 0;
+        this.airComposition = new double[8];
     }
 
-    public static void put(String req1)
-    {
+    public static void put(String req) {
         try {
-            URL url = new URL(req1);
+            URL url = new URL(req);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-            httpCon.setDoOutput(true);
-            httpCon.setRequestMethod("PUT");
-            OutputStreamWriter out = new OutputStreamWriter(
-                    httpCon.getOutputStream());
-            out.close();
-            //httpCon.getInputStream();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            for (int i = 1; i <= 8; i++) {
+                System.out.println(httpCon.getHeaderFieldKey(i) + " = " + httpCon.getHeaderField(i));
+            }
+            httpCon.disconnect();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -82,11 +82,11 @@ public class HAB {
         this.type = type;
     }
 
-    public String getCurrentDatetime() {
+    public LocalDateTime getCurrentDatetime() {
         return currentDatetime;
     }
 
-    public void setCurrentDatetime(String currentDatetime) {
+    public void setCurrentDatetime(LocalDateTime currentDatetime) {
         this.currentDatetime = currentDatetime;
     }
 
@@ -122,11 +122,11 @@ public class HAB {
         this.currentSpeed = currentSpeed;
     }
 
-    public String getTakeoffDatetime() {
+    public LocalDateTime getTakeoffDatetime() {
         return takeoffDatetime;
     }
 
-    public void setTakeoffDatetime(String takeoffDatetime) {
+    public void setTakeoffDatetime(LocalDateTime takeoffDatetime) {
         this.takeoffDatetime = takeoffDatetime;
     }
 
