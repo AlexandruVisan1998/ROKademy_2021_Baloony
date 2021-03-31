@@ -1,30 +1,17 @@
 package com.Baloony;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.Random;
 import java.time.LocalDateTime;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Scanner;
 
 import static com.Baloony.HAB.put;
 
 public class Main {
 
-    public static void main(String[] args) {
-        // generam cu random
-        // 5 thread-uri
-        // toate intr-un while cat timp merge aplicatia
-        // trimitem datele prin JSON, REST API, catre thingworx
+    public static void main(String[] args) throws IOException {
 
-        Random rand = new Random();
         HAB[] hab = new HAB[Constants.NUMBER_OF_HABS];
         Thread[] thread = new Thread[Constants.NUMBER_OF_HABS];
 
@@ -38,53 +25,95 @@ public class Main {
 
         // Generate random data for each HAB
         for (int indexHAB = 0; indexHAB < Constants.NUMBER_OF_HABS; indexHAB++) {
-            // Date format (according with ThingWorx)
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
-//            long beginTime = Timestamp.valueOf(Constants.BEGIN_TIME).getTime();
-//            long endTime = Timestamp.valueOf(Constants.END_TIME).getTime();
-            // Generate random date
-            Date randomDate = new Date(System.currentTimeMillis());
-            //System.out.println(dateFormat.format(randomDate));
-            hab[indexHAB].setTakeoffDatetime(dateFormat.format(randomDate));
-            hab[indexHAB].setTakeoffLatitude(Math.random() * (Constants.MAX_LATITUDE - Constants.MIN_VALUE + 1) + Constants.MIN_VALUE);
-            hab[indexHAB].setTakeoffLongitude(Math.random() * (Constants.MAX_LONGITUDE - Constants.MIN_VALUE + 1) + Constants.MIN_VALUE);
+            hab[indexHAB].setTakeoffDatetime(LocalDateTime.now());
+            hab[indexHAB].setTakeoffLatitude(Math.random() * (Constants.MAX_LATITUDE - Constants.MIN_LATITUDE + 1) + Constants.MIN_LATITUDE);
+            hab[indexHAB].setTakeoffLongitude(Math.random() * (Constants.MAX_LONGITUDE - Constants.MIN_LONGITUDE + 1) + Constants.MIN_LONGITUDE);
 
+            File myObj = new File("lastValue_Location" + indexHAB + ".txt");
+            Scanner myReader = null;
+            try {
+                myReader = new Scanner(myObj);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            if(myObj.length() != 0) {
+                double[] vect = new double[3];
+                int i = 0;
+                while (myReader.hasNextLine()) {
+                    vect[i++] = Double.parseDouble(myReader.nextLine());
+                }
+                // Current Latitude and Longitude
+                hab[indexHAB].setCurrentLatitude(vect[0]);
+                hab[indexHAB].setCurrentLongitude(vect[1]);
+                // Current Altitude
+                hab[indexHAB].setCurrentAltitude(vect[2]);
+            } else {
+                // Current Altitude
+                hab[indexHAB].setCurrentAltitude(Math.random() * (Constants.MAX_ALTITUDE - Constants.MIN_ALTITUDE + 1) + Constants.MIN_ALTITUDE);
+                // Current Latitude and Longitude
+                hab[indexHAB].setCurrentLatitude(Math.random() * (Constants.MAX_LATITUDE - Constants.MIN_LATITUDE + 1) + Constants.MIN_LATITUDE);
+                hab[indexHAB].setCurrentLongitude(Math.random() * (Constants.MAX_LONGITUDE - Constants.MIN_LONGITUDE + 1) + Constants.MIN_LONGITUDE);
+            }
+
+            // Current Wind Speed
+            hab[indexHAB].setWindSpeed(Math.random() * (Constants.MAX_WIND - Constants.MIN_VALUE + 1) + Constants.MIN_VALUE);
+            // Current Speed
+            hab[indexHAB].setCurrentSpeed(Math.random() * (Constants.MAX_SPEED - Constants.MIN_SPEED + 1) + Constants.MIN_SPEED);
+            // Current Air Pressure
+            hab[indexHAB].setAirPressure(Math.random() * (Constants.MAX_PRESSURE - Constants.MIN_PRESSURE + 1) + Constants.MIN_PRESSURE);
+            // Current Air Temperature
+            hab[indexHAB].setAirTemperature(Math.random() * (Constants.MAX_TEMP - Constants.MIN_TEMP + 1) + Constants.MIN_TEMP);
+
+            // Launch balloons at a difference of one second from each other
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            // Send fixed information about HABs
+            String reqName = Constants.reqSubstring1 + (indexHAB + 1) + Constants.reqSubstring2 +
+                    Constants.NAME + Constants.reqSubstring3 + hab[indexHAB].getName() +
+                    Constants.reqSubstring4;
+            String reqSerialNumber = Constants.reqSubstring1 + (indexHAB + 1) + Constants.reqSubstring2 +
+                    Constants.SERIAL_NUMBER + Constants.reqSubstring3 + hab[indexHAB].getSerialNumber() +
+                    Constants.reqSubstring4;
+            String reqType = Constants.reqSubstring1 + (indexHAB + 1) + Constants.reqSubstring2 +
+                    Constants.TYPE + Constants.reqSubstring3 + hab[indexHAB].getType() +
+                    Constants.reqSubstring4;
 
-            String req1 = "https://pp-2103241556kr.devportal.ptc.io:443/Thingworx/Things/HAB00" + (indexHAB + 1)  +
-                    "/Properties/balloonName?method=PUT&value=" + hab[indexHAB].getName() +
-                    "&appKey=ff0a6265-791c-45f7-a567-5d3d3b1e42d9&x-thingworx-session=true";
-            System.out.println(req1);
+            String reqTakeoffDateTime = Constants.reqSubstring1 + (indexHAB + 1) + Constants.reqSubstring2 +
+                    Constants.TAKEOFF_DATETIME + Constants.reqSubstring3 + hab[indexHAB].getTakeoffDatetime() +
+                    Constants.reqSubstring4;
 
+            String location = hab[indexHAB].getCurrentLatitude() + "," + hab[indexHAB].getTakeoffLongitude() + ",0";
+            String reqTakeoffLocation = Constants.reqSubstring1 + (indexHAB + 1) + Constants.reqSubstring2 +
+                    Constants.TAKEOFF_LOCATION + Constants.reqSubstring3 + location +
+                    Constants.reqSubstring4;
 
-            // TODO: functie in HAB
-            put(req1);
-
+            put(reqName);
+            put(reqSerialNumber);
+            put(reqType);
+            put(reqTakeoffDateTime);
+            put(reqTakeoffLocation);
 
         }
 
-
         while (true) {
             for (int threadID = 0; threadID < Constants.NUMBER_OF_HABS; threadID++) {
-                thread[threadID] = new Thread(new MyThread(hab[threadID]));
+                thread[threadID] = new Thread(new MyThread(hab[threadID], threadID));
                 thread[threadID].start();
             }
 
             for (int threadID = 0; threadID < Constants.NUMBER_OF_HABS; threadID++) {
                 try {
                     thread[threadID].join();
-//                    System.out.println("Current thread is " + threadID);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
             // Delay intre fiecare update
             try {
-                Thread.sleep(1000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
